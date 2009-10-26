@@ -13,7 +13,6 @@ my $hup  = 0;
 $SIG{USR1} = sub { $usr1++ };
 $SIG{HUP}  = sub { $hup++ };
 
-
 Sys::Signals::Block->block;
 
 kill SIGHUP, $$;
