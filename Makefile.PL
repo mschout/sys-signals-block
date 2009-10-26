@@ -21,5 +21,5 @@ WriteMakefile(
         'POSIX'           => 0
     },
     ABSTRACT_FROM  => 'lib/Sys/Signals/Block.pm',
-    AUTHOR         => 'Michael J Schout <mschout@cpan.org>'
+    AUTHOR         => 'Michael Schout <mschout@cpan.org>'
 );
