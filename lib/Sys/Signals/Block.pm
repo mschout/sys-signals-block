@@ -7,7 +7,7 @@ use base qw(Class::Accessor::Fast);
 use Carp qw(croak);
 use POSIX qw(sigprocmask SIG_BLOCK SIG_UNBLOCK);
 
-our $VERSION = '0.01';
+our $VERSION = '0.02_01';
 
 __PACKAGE__->mk_accessors(qw(sigset is_blocked));
 

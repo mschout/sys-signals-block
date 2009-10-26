@@ -1,4 +1,7 @@
 Revision history for Perl extension Sys::Signals::Block.
 
+0.02_01
+   - Makefile.PL check that POSIX->SigSet is supported on this platform
+
 0.01  Sun Oct 25 2009
    - original version
