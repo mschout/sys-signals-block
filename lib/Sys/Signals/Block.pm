@@ -135,6 +135,20 @@ This module provides an easy way to block the delivery of certain signals.
 This is essentially just a wrapper around C<POSIX::sigprocmask(SIG_BLOCK, ...)>
 and C<POSIX::sigprocmask(SIG_UNBLOCK, ...)>, but with a much simpler API.
 
+The set of signals that should be blocked are given in the import list (the
+parameters in the C<use> line for the module).  The signal values can be either
+numeric, or string names.  If names are given, they may be given either with or
+without the C<SIG> prefix.  For example, the following are all equivalent:
+
+ # names, no SIG prefix
+ use Sys::Signals::Block qw(TERM INT);
+
+ # names with SIG prefix
+ use Sys::Signals::Block qw(SIGTERM SIGINT);
+
+ # integers, using POSIX constants
+ use Sys::Signals::Block (POSIX::SIGTERM, POSIX::SIGINT);
+
 =head1 METHODS
 
 All methods can be called either as class methods, or as object methods on the
