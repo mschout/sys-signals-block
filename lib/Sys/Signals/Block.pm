@@ -11,16 +11,57 @@ our $VERSION = '0.01';
 
 __PACKAGE__->mk_accessors(qw(sigset is_blocked));
 
+# mapping of signame => number
+my %SigNum = _get_signums();
+
 sub import {
     my $class = shift;
 
-    # TODO: map signal names to values
-
     if (@_) {
-        my $sigset = POSIX::SigSet->new(@_)
+        my @sigs = $class->_parse_signals(@_)
+            or croak "no signals listed on import line";
+
+        my $sigset = POSIX::SigSet->new(@sigs)
             or croak "Can't create SigSet: $!";
+
         $class->instance->sigset($sigset);
     }
+}
+
+# convert signal names to numbers
+sub _get_signums {
+    require Config;
+
+    my @names = split /\s+/, $Config::Config{sig_name};
+    my @nums  = split /[\s,]+/, $Config::Config{sig_num};
+
+    my %sigs;
+    @sigs{@names} = @nums;
+
+    return %sigs;
+}
+
+sub _parse_signals {
+    my ($class, @signals) = @_;
+
+    my @nums;
+
+    for my $signal (@signals) {
+        unless ($signal =~ /\D/) {
+            push @nums, $signal;
+        }
+        else {
+            $signal =~ s/^SIG//;
+            my $num = $SigNum{$signal};
+            unless (defined $num) {
+                croak "invalid signal name: 'SIG${signal}'";
+            }
+
+            push @nums, $num;
+        }
+    }
+
+    return @nums;
 }
 
 my $Instance;
