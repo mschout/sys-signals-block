@@ -4,3 +4,6 @@ Makefile.PL
 MANIFEST			This list of files
 MANIFEST.SKIP
 README
+t/block.t
+t/compile.t
+t/signals.t
