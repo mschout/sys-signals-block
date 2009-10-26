@@ -8,6 +8,7 @@ WriteMakefile(
     PREREQ_PM         => {
         'Class::Accessor' => 0,
         'Test::More'      => 0,
+        'Test::Exception' => 0
     },
     ABSTRACT_FROM  => 'lib/Sys/Signals/Block.pm',
     AUTHOR         => 'Michael J Schout <mschout@cpan.org>'
