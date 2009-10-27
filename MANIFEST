@@ -7,3 +7,4 @@ README
 t/block.t
 t/compile.t
 t/signals.t
+t/signature.t
