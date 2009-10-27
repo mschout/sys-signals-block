@@ -1,5 +1,8 @@
 Revision history for Perl extension Sys::Signals::Block.
 
+0.03
+   - fix "bareword" errors in signals.t
+
 0.02  Mon Oct 26 2009
    - Makefile.PL check that POSIX->SigSet is supported on this platform
 
