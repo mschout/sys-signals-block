@@ -6,3 +6,4 @@ Makefile.old
 Sys-Signals-Block*
 *.swp
 *.bak
+.build/
