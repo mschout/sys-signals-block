@@ -1,5 +1,11 @@
 Revision history for Perl extension Sys::Signals::Block.
 
+{{$NEXT}}
+    - Add META.json.
+    - Switch bug tracker to github issues.
+    - Use Dist::Zilla to build the dist.
+    - Make signature test an author test.
+
 0.10  Fri Nov 13 2009
     - disable signature test unless TEST_SIGNATURE is enabled, otherwise test
       fails if keyserver is unreachable.
