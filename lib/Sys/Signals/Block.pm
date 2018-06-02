@@ -4,45 +4,67 @@ package Sys::Signals::Block;
 
 use 5.008;
 use strict;
-use base qw(Class::Accessor::Fast);
+use warnings;
 
+use Moo;
+use strictures 2;
 use Carp qw(croak);
 use POSIX qw(sigprocmask SIG_BLOCK SIG_UNBLOCK);
+use namespace::clean;
 
-__PACKAGE__->mk_accessors(qw(sigset is_blocked));
+=method sigset(): POSIX::SigSet
 
-# mapping of signame => number
-my %SigNum = _get_signums();
+Get the set of signals that will be blocked.
+
+=cut
+
+has sigset => (is => 'rw');
+
+
+=method is_blocked(): bool
+
+Return C<true> if the set of signals are currently blocked, C<false> otherwise.
+
+=cut
+
+has is_blocked => (is => 'rw');
+
+# maps signal names to signal numbers
+has signal_numbers => (is => 'lazy');
 
 sub import {
     my $class = shift;
 
     if (@_) {
-        my @sigs = $class->_parse_signals(@_)
-            or croak "no signals listed on import line";
+        my $instance = $class->instance;
+
+        my @sigs = $instance->parse_signals(@_)
+            or croak "no valid signals listed on import line";
 
         my $sigset = POSIX::SigSet->new(@sigs)
             or croak "Can't create SigSet: $!";
 
-        $class->instance->sigset($sigset);
+        $instance->sigset($sigset);
     }
 }
 
-# convert signal names to numbers
-sub _get_signums {
+sub _build_signal_numbers {
+    my $self = shift;
+
     require Config;
 
     my @names = split /\s+/, $Config::Config{sig_name};
     my @nums  = split /[\s,]+/, $Config::Config{sig_num};
 
     my %sigs;
+
     @sigs{@names} = @nums;
 
-    return %sigs;
+    return \%sigs;
 }
 
-sub _parse_signals {
-    my ($class, @signals) = @_;
+sub parse_signals {
+    my ($self, @signals) = @_;
 
     my @nums;
 
@@ -52,7 +74,9 @@ sub _parse_signals {
         }
         else {
             $signal =~ s/^SIG//;
-            my $num = $SigNum{$signal};
+
+            my $num = $self->signal_numbers->{$signal};
+
             unless (defined $num) {
                 croak "invalid signal name: 'SIG${signal}'";
             }
@@ -64,19 +88,19 @@ sub _parse_signals {
     return @nums;
 }
 
-my $Instance;
-
 =method instance(): scalar
 
 Returns the instance of this module.
 
 =cut
 
+my $Instance;
+
 sub instance {
     my $class = shift;
 
     unless ( defined $Instance ) {
-        $Instance = $class->new({ is_blocked => 0 });
+        $Instance = $class->new(is_blocked => 0);
     }
 
     return $Instance;
@@ -127,6 +151,8 @@ sub unblock {
 1;
 
 __END__
+
+=for Pod::Coverage signal_numbers parse_signals
 
 =head1 SYNOPSIS
 

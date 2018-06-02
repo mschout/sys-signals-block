@@ -5,6 +5,7 @@ Revision history for Perl extension Sys::Signals::Block.
     - Switch bug tracker to github issues.
     - Use Dist::Zilla to build the dist.
     - Make signature test an author test.
+    - use Moo internally, drop Class::Accessor dependency
 
 0.10  Fri Nov 13 2009
     - disable signature test unless TEST_SIGNATURE is enabled, otherwise test
