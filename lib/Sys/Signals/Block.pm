@@ -93,7 +93,8 @@ sub instance {
 
 =method block(): void
 
-Blocks the set of signals given in the C<use> line.
+Blocks the set of signals given in the C<use> line.  Returns true if
+successful, false otherwise.
 
 =cut
 
@@ -114,8 +115,8 @@ sub block {
 =method unblock(): void
 
 Unblocks the set of signals given in the C<use> line.  Any signals that were
-not delivered while signals were blocked will be delivered once the signals are
-unblocked.
+not delivered while signals were blocked will be delivered once the signals
+are unblocked.  Returns true if successful, false otherwise.
 
 =cut
 
@@ -165,6 +166,7 @@ sub _parse_signals {
 
     return POSIX::SigSet->new(@nums);
 }
+
 sub _build_signal_numbers {
     my $self = shift;
 
