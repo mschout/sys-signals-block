@@ -6,7 +6,10 @@ use lib 't/lib';
 use POSIX qw(SIGHUP SIGUSR1);
 use Sys::Signals::Block qw(SIGHUP SIGUSR1);
 use My::Test::SignalHandlers;
-use Test::More tests => 4;
+use Test::More tests => 6;
+
+cmp_ok $HUP, '==', 0;
+cmp_ok $USR1, '==', 0;
 
 Sys::Signals::Block->block;
 
