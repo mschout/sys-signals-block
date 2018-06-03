@@ -7,10 +7,14 @@ use strict;
 use warnings;
 
 use Moo;
+use MooX::ClassAttribute;
 use strictures 2;
 use Carp qw(croak);
 use POSIX qw(sigprocmask SIG_BLOCK SIG_UNBLOCK);
 use namespace::clean;
+
+# maps signal names to signal numbers
+class_has signal_numbers => (is => 'lazy');
 
 =method sigset(): POSIX::SigSet
 
@@ -20,17 +24,13 @@ Get the set of signals that will be blocked.
 
 has sigset => (is => 'rw');
 
-
 =method is_blocked(): bool
 
 Return C<true> if the set of signals are currently blocked, C<false> otherwise.
 
 =cut
 
-has is_blocked => (is => 'rw');
-
-# maps signal names to signal numbers
-has signal_numbers => (is => 'lazy');
+has is_blocked => (is => 'rw', default => sub { 0 });
 
 sub import {
     my $class = shift;
@@ -38,55 +38,40 @@ sub import {
     if (@_) {
         my $instance = $class->instance;
 
-        my @sigs = $instance->parse_signals(@_)
+        my $sigset = $instance->_parse_signals(@_)
             or croak "no valid signals listed on import line";
-
-        my $sigset = POSIX::SigSet->new(@sigs)
-            or croak "Can't create SigSet: $!";
 
         $instance->sigset($sigset);
     }
 }
 
-sub _build_signal_numbers {
-    my $self = shift;
+=method new(@signals): object
 
-    require Config;
+Construct a new L<Sys::Signals::Block> object with the given list of signals to
+be blocked.  C<@signals> can be a list of signal names or integer signal
+numbers.
 
-    my @names = split /\s+/, $Config::Config{sig_name};
-    my @nums  = split /[\s,]+/, $Config::Config{sig_num};
+For example, the following are all equivalent:
 
-    my %sigs;
+ $sigs = Sys::Signals::Block->new(qw(SIGINT SIGTERM));
+ $sigs = Sys::Signals::Block->new(qw(INT TERM));
+ $sigs = Sys::Signals::Block->new(2, 15);
 
-    @sigs{@names} = @nums;
+=cut
 
-    return \%sigs;
-}
+around BUILDARGS => sub {
+    my ($orig, $class, @args) = @_;
 
-sub parse_signals {
-    my ($self, @signals) = @_;
+    if (@args and !ref $args[0]) {
+        my $sigset = $class->_parse_signals(@args)
+            or croak "No valid signals given to constructor\n";
 
-    my @nums;
-
-    for my $signal (@signals) {
-        unless ($signal =~ /\D/) {
-            push @nums, $signal;
-        }
-        else {
-            $signal =~ s/^SIG//;
-
-            my $num = $self->signal_numbers->{$signal};
-
-            unless (defined $num) {
-                croak "invalid signal name: 'SIG${signal}'";
-            }
-
-            push @nums, $num;
-        }
+        return $class->$orig({sigset => $sigset});
     }
-
-    return @nums;
-}
+    else {
+        return $class->$orig(@args);
+    }
+};
 
 =method instance(): scalar
 
@@ -100,7 +85,7 @@ sub instance {
     my $class = shift;
 
     unless ( defined $Instance ) {
-        $Instance = $class->new(is_blocked => 0);
+        $Instance = $class->new;
     }
 
     return $Instance;
@@ -113,7 +98,7 @@ Blocks the set of signals given in the C<use> line.
 =cut
 
 sub block {
-    my $self = shift->instance;
+    my $self = __self_or_instance(@_);
 
     return if $self->is_blocked;
 
@@ -135,7 +120,7 @@ unblocked.
 =cut
 
 sub unblock {
-    my $self = shift->instance;
+    my $self = __self_or_instance(@_);
 
     return unless $self->is_blocked;
 
@@ -148,14 +133,74 @@ sub unblock {
     return $retval;
 }
 
+# parse a list of signal names and return a POSIX::SigSet object representing
+# the set of signals.  Return nothing if no valid signals were parsed.  Will
+# croak if an invalid signal name is given.
+sub _parse_signals {
+    my ($class, @signals) = @_;
+
+    my @nums;
+
+    for my $signal (@signals) {
+        unless ($signal =~ /\D/) {
+            push @nums, $signal;
+        }
+        else {
+            $signal =~ s/^SIG//;
+
+            my $num = $class->signal_numbers->{$signal};
+
+            unless (defined $num) {
+                croak "invalid signal name: 'SIG${signal}'";
+            }
+
+            push @nums, $num;
+        }
+    }
+
+    # no valid signals, just return.
+    unless (@nums) {
+        return;
+    }
+
+    return POSIX::SigSet->new(@nums);
+}
+sub _build_signal_numbers {
+    my $self = shift;
+
+    require Config;
+
+    my @names = split /\s+/, $Config::Config{sig_name};
+    my @nums  = split /[\s,]+/, $Config::Config{sig_num};
+
+    my %sigs;
+
+    @sigs{@names} = @nums;
+
+    return \%sigs;
+}
+
+sub __self_or_instance {
+    my $self = shift;
+
+    unless (ref $self) {
+        $self = $self->instance;
+    }
+
+    return $self;
+}
+
 1;
 
 __END__
 
-=for Pod::Coverage signal_numbers parse_signals
+=for Pod::Coverage BUILDARGS signal_numbers
 
 =head1 SYNOPSIS
 
+  #
+  # Method 1: use signal names on import line, block using class method
+  #
   use Sys::Signals::Block qw(TERM INT);
 
   Sys::Signals::Block->block;
@@ -164,8 +209,23 @@ __END__
   Sys::Signals::Block->unblock;
   # signals sent during critical section will be delivered here
 
-  # or if you prefer object syntax:
+  #
+  # Method 2: Same as method 1, but use singleton object instead of class method
+  #
+  use Sys::Signals::Block qw(TERM INT);
+
   my $sigs = Sys::Signals::Block->instance;
+
+  $sigs->block;
+  # critical section
+  $sigs->unblock;
+
+  #
+  # Method 3: Specify the signals you want to block in the constructor
+  #
+  use Sys::Signals::Block;
+
+  my $sigs = Sys::Signals::Block->new('SIGTERM', 'SIGINT');
 
   $sigs->block;
   # critical section
@@ -177,27 +237,28 @@ This module provides an easy way to block the delivery of certain signals.
 This is essentially just a wrapper around C<POSIX::sigprocmask(SIG_BLOCK, ...)>
 and C<POSIX::sigprocmask(SIG_UNBLOCK, ...)>, but with a much simpler API.
 
-The set of signals that should be blocked are given in the import list (the
-parameters in the C<use> line for the module).  The signal values can be either
-numeric, or string names.  If names are given, they may be given either with or
-without the C<SIG> prefix.  For example, the following are all equivalent:
+The set of signals that should be blocked can given in the import list (the
+parameters in the C<use> line for the module), or, can be specified in the call
+to C<new()>.  The signal values can be either numeric, or string names.  If
+names are given, they may be given either with or without the C<SIG> prefix.
+For example, the following are all equivalent:
 
  # names, no SIG prefix
  use Sys::Signals::Block qw(TERM INT);
+ my $sigs = Sys::Signals::Block->new(qw(TERM INT));
 
  # names with SIG prefix
  use Sys::Signals::Block qw(SIGTERM SIGINT);
+ my $sigs = Sys::Signals::Block->new(qw(SIGTERM SIGINT));
 
  # integers, using POSIX constants
  use Sys::Signals::Block (POSIX::SIGTERM, POSIX::SIGINT);
+ my $sigs = Sys::Signals::Block->new(POSIX::SIGTERM, POSIX::SIGINT);
 
 All methods can be called either as class methods, or as object methods on the
-C<<Sys::Signals::Block->instance>> object.
-
-=head1 TODO
-
-=for :list
-* Add ability to change the set of signals that should be blocked at runtime.
+C<<Sys::Signals::Block->instance>> object if using the C<import()> method.  If
+using the constructor syntax, you must call block on the object you created
+with C<new()>.
 
 =head1 SEE ALSO
 

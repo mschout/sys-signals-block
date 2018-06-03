@@ -1,7 +1,9 @@
 Revision history for Perl extension Sys::Signals::Block.
 
 {{$NEXT}}
-    - Add META.json.
+    - Add object oriented interface, where signal names can be passed to new()
+      instead of on the import line.
+    - Kwalitee: Add META.json.
     - Switch bug tracker to github issues.
     - Use Dist::Zilla to build the dist.
     - Make signature test an author test.
